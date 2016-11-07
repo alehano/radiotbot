@@ -1,0 +1,6 @@
+.idea/
+data/*
+!data/.keep
+radiotbot.iml
+radiotbot
+fetch_test.go
