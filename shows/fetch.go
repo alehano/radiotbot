@@ -1,4 +1,4 @@
-package main
+package shows
 
 import (
 	"strings"
@@ -13,18 +13,12 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/alehano/batch"
-)
-
-const (
-	radioTArchiveURL  = radioTURL + "/archives/"
-	radioTTitlePrefix = "Радио-Т "
+	"github.com/alehano/radiotbot/config"
 )
 
 // GetShows gets shows data concurrently. Starts from "fromID" (included)
 // Returns errors to "errHandler" function.
-func GetShows(fromID int, errHandler func(error)) *Shows {
-	const workers = 10
-
+func Get(fromID int, errHandler func(error)) *Shows {
 	shows := NewShows()
 	showsLinks, err := fetchShowsLinks(fromID)
 	if err != nil {
@@ -32,7 +26,7 @@ func GetShows(fromID int, errHandler func(error)) *Shows {
 		return shows
 	}
 
-	batch := batch.New(workers, errHandler)
+	batch := batch.New(config.FetchWorkers, errHandler)
 	batch.Start()
 
 	for _, showURL := range showsLinks {
@@ -57,25 +51,20 @@ func GetShows(fromID int, errHandler func(error)) *Shows {
 func fetchShowsLinks(fromID int) ([]string, error) {
 	links := []string{}
 
-	doc, err := goquery.NewDocument(radioTArchiveURL)
+	doc, err := goquery.NewDocument(config.RadioTArchiveURL)
 	if err != nil {
 		return links, err
 	}
 
 	doc.Find("article h1 a").Each(func(i int, s *goquery.Selection) {
 		if url, ok := s.Attr("href"); ok {
-			text := s.Text()
-			if strings.HasPrefix(text, radioTTitlePrefix) {
-				numS := strings.TrimPrefix(text, radioTTitlePrefix)
-				numS = strings.TrimSpace(numS)
-				if num, err := strconv.Atoi(numS); err == nil {
-					if fromID > 0 {
-						if num >= fromID {
-							links = append(links, radioTURL+url)
-						}
-					} else {
-						links = append(links, radioTURL+url)
+			if ok, id := parseTitle(s.Text()); ok {
+				if fromID > 0 {
+					if id >= fromID {
+						links = append(links, config.RadioTURL+url)
 					}
+				} else {
+					links = append(links, config.RadioTURL+url)
 				}
 			}
 		}
@@ -91,10 +80,7 @@ func fetchShow(url string) (Show, error) {
 		return show, err
 	}
 
-	idS := doc.Find("h1.entry-title").Text()
-	idS = strings.TrimPrefix(idS, radioTTitlePrefix)
-	idS = strings.TrimSpace(idS)
-	if id, err := strconv.Atoi(idS); err == nil {
+	if ok, id := parseTitle(doc.Find("h1.entry-title").Text()); ok {
 		show.ID = id
 	} else {
 		return show, errors.New("Bad ID for: " + url)
@@ -148,4 +134,17 @@ func fetchShow(url string) (Show, error) {
 		return show, allErr[0]
 	}
 	return show, nil
+}
+
+func parseTitle(title string) (bool, int) {
+	title = strings.TrimSpace(strings.ToLower(title))
+	if strings.HasPrefix(title, "радио") {
+		parts := strings.Split(title, " ")
+		if len(parts) == 2 {
+			if num, err := strconv.Atoi(parts[1]); err == nil {
+				return true, num
+			}
+		}
+	}
+	return false, 0
 }

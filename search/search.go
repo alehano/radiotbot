@@ -1,17 +1,18 @@
-package main
+package search
 
 import (
 	"fmt"
 
+	"github.com/alehano/radiotbot/shows"
 	"github.com/blevesearch/bleve"
 )
 
-func NewSearchIndex() (bleve.Index, error) {
+func NewIndex() (bleve.Index, error) {
 	mapping := bleve.NewIndexMapping()
 	return bleve.NewMemOnly(mapping)
 }
 
-func AddToIndex(index bleve.Index, show Show) error {
+func AddToIndex(index bleve.Index, show shows.Show) error {
 	for i, topic := range show.TopicsText {
 		err := index.Index(fmt.Sprintf("%d:%d", show.ID, i), topic)
 		if err != nil {
@@ -21,7 +22,7 @@ func AddToIndex(index bleve.Index, show Show) error {
 	return nil
 }
 
-func ReindexAll(index bleve.Index, shows *Shows) error {
+func ReindexAll(index bleve.Index, shows *shows.Shows) error {
 	for _, show := range shows.GetItems() {
 		err := AddToIndex(index, show)
 		if err != nil {
@@ -31,16 +32,16 @@ func ReindexAll(index bleve.Index, shows *Shows) error {
 	return nil
 }
 
-func Search(index bleve.Index, q string) error {
+func Query(index bleve.Index, q string) (string, error) {
 	query := bleve.NewQueryStringQuery(q)
 	searchRequest := bleve.NewSearchRequest(query)
 	searchResult, err := index.Search(searchRequest)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	fmt.Printf("SEARCH: %s - ", q)
 	fmt.Printf("%+v\n", searchResult)
 
-	return nil
+	return "", nil
 }

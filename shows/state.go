@@ -1,17 +1,19 @@
-package main
+package shows
 
 import (
 	"encoding/gob"
 	"log"
 	"os"
+
+	"github.com/alehano/radiotbot/config"
 )
 
-func LoadShows() *Shows {
-	if _, err := os.Stat(showsFilePath); os.IsNotExist(err) {
+func Load() *Shows {
+	if _, err := os.Stat(config.ShowsFilePath); os.IsNotExist(err) {
 		return NewShows()
 	}
 
-	f, err := os.Open(showsFilePath)
+	f, err := os.Open(config.ShowsFilePath)
 	if err != nil {
 		log.Println("Open gob file error: " + err.Error())
 		return NewShows()
@@ -26,8 +28,8 @@ func LoadShows() *Shows {
 	return shows
 }
 
-func SaveShows(shows *Shows) error {
-	f, err := os.Create(showsFilePath)
+func Save(shows *Shows) error {
+	f, err := os.Create(config.ShowsFilePath)
 	if err != nil {
 		return err
 	}
