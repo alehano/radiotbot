@@ -1,35 +1,12 @@
-Last update
-Last show number
+# Радио-Т поиск бот
+https://github.com/umputun/rt-bot
 
-Blevee index
+### Команды
 
-----
+`Поиск!` - помощь 
+`Поиск [запрос[:число результатов]]!` - поиск по выпускам 
+`Выпуск [номер выпуска]!` - содержание выпуска
 
-Выпуск ?!
+В запросе поддерживаются `-` и `+` префиксы и маска `*`
+Примеры: `Выпуск 520!`, `Поиск docker swarm!`, `Поиск +яндекс* +google :10!`
 
-Выпуск 250!
-Выпуск nexus 7!
-Выпуск бобук!
-
-Выпуск 1000! - в будущем
-
-Выпуск сейчас!
-
-250
-
-Выпуск Бобук!
-
-Выпуск 520: Бобук жжет
-Выпуск 234: Бобук наносит ответный удар 
-
-
------
-
-Algo: 
-
-init - load shows.gob
-check last show time, if > 7 days - update (from last show)
-set cron - update every monday
-
-
-ОПИСАТЬ - http://www.blevesearch.com/docs/Query-String-Query/

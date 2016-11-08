@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alehano/radiotbot/search"
@@ -15,14 +17,21 @@ import (
 
 	"encoding/json"
 
+	"fmt"
+
 	"github.com/alehano/radiotbot/config"
 	"gopkg.in/robfig/cron.v2"
 )
 
-var searchIndex bleve.Index
+const helpTextMd = "`Поиск!` - помощь\n`Поиск [запрос[:число результатов]]!` - поиск по выпускам\n`Выпуск [номер выпуска]!` - содержание выпуска\n\nВ запросе поддерживаются `-` и `+` префиксы и маска `*`\nПримеры: `Выпуск 520!`, `Поиск docker swarm!`, `Поиск +яндекс* +google :10!`\n"
+
+var (
+	searchIndex bleve.Index
+	allShows    *shows.Shows
+)
 
 func main() {
-	allShows := shows.Load()
+	allShows = shows.Load()
 
 	newSearchIndex, err := search.NewIndex()
 	if err != nil {
@@ -49,6 +58,7 @@ func main() {
 	}
 
 	// Run server
+	log.Printf("%s\n", config.BotName)
 	log.Printf("Total shows: %d, last show #%d\n", allShows.Len(), allShows.Last().ID)
 	log.Printf("Bot running at %s\n", config.Port)
 
@@ -119,7 +129,7 @@ func webHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	answer, err := search.Query(searchIndex, rd.Text)
+	answer, err := query(strings.ToLower(rd.Text))
 	if err != nil || answer == "" {
 		if err != nil {
 			log.Println(err)
@@ -134,4 +144,51 @@ func webHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusExpectationFailed)
 		return
 	}
+}
+
+func query(q string) (string, error) {
+	if q == "поиск!" || q == "поиск !" {
+		return getHelp()
+	}
+
+	if strings.HasPrefix(q, "поиск") && strings.HasSuffix(q, "!") {
+		return search.Query(searchIndex, q, allShows)
+	}
+
+	if strings.HasPrefix(q, "выпуск") && strings.HasSuffix(q, "!") {
+		return getShowDetail(q)
+	}
+
+	return "", nil
+}
+
+func getHelp() (string, error) {
+	return helpTextMd, nil
+}
+
+func getShowDetail(q string) (string, error) {
+	q = strings.Replace(q, "выпуск", "", 1)
+	q = strings.Replace(q, "!", "", -1)
+	q = strings.TrimSpace(q)
+	num, err := strconv.Atoi(q)
+	if err != nil {
+		return "", nil
+	}
+	if show, ok := allShows.ItemsByID[num]; ok {
+		out := fmt.Sprintf("**[Выпуск %d](%s)**\n", show.ID, show.URL)
+		for _, topic := range show.TopicsMarkdown {
+			out = fmt.Sprintf("%s* %s\n", out, topic)
+		}
+		if show.AudioURL != "" {
+			out = fmt.Sprintf("%s[аудио](%s)", out, show.AudioURL)
+		}
+		if show.TorrentURL != "" {
+			out = fmt.Sprintf("%s | [torrent](%s)", out, show.TorrentURL)
+		}
+		if show.ChatLogURL != "" {
+			out = fmt.Sprintf("%s | [лог чата](%s)", out, show.ChatLogURL)
+		}
+		return out, nil
+	}
+	return "", nil
 }

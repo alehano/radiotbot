@@ -2,7 +2,11 @@ package search
 
 import (
 	"fmt"
+	"strings"
 
+	"strconv"
+
+	"github.com/alehano/radiotbot/config"
 	"github.com/alehano/radiotbot/shows"
 	"github.com/blevesearch/bleve"
 )
@@ -32,16 +36,65 @@ func ReindexAll(index bleve.Index, shows *shows.Shows) error {
 	return nil
 }
 
-func Query(index bleve.Index, q string) (string, error) {
+func Query(index bleve.Index, q string, allShows *shows.Shows) (string, error) {
+	q = strings.Replace(q, "поиск", "", 1)
+	q = strings.Replace(q, "!", "", -1)
+	q = strings.TrimSpace(q)
+
+	size := config.DefaultSearchResults
+
+	// Check if results count set
+	parts := strings.Split(q, ":")
+	if len(parts) == 2 {
+		if newSize, err := strconv.Atoi(parts[1]); err == nil {
+			if newSize == 0 {
+				newSize = config.DefaultSearchResults
+			}
+			if newSize > config.MaxSearchResults {
+				newSize = config.MaxSearchResults
+			}
+			size = newSize
+			q = parts[0]
+		}
+	}
+
 	query := bleve.NewQueryStringQuery(q)
 	searchRequest := bleve.NewSearchRequest(query)
+	searchRequest.Size = size
 	searchResult, err := index.Search(searchRequest)
 	if err != nil {
 		return "", err
 	}
 
-	fmt.Printf("SEARCH: %s - ", q)
-	fmt.Printf("%+v\n", searchResult)
+	out := ""
+	if searchResult.Total == 0 {
+		out = "Ничего не найдено"
+	} else {
+		for _, hit := range searchResult.Hits {
+			if ok, showID, topicIdx := parseSearchId(hit.ID); ok {
+				if len(allShows.ItemsByID[showID].TopicsMarkdown) > topicIdx {
+					out = fmt.Sprintf("%s* [Выпуск %d](%s): %s\n",
+						out,
+						allShows.ItemsByID[showID].ID,
+						allShows.ItemsByID[showID].URL,
+						allShows.ItemsByID[showID].TopicsMarkdown[topicIdx])
+				}
+			}
+		}
+	}
 
-	return "", nil
+	return out, nil
+}
+
+// Returns Show ID and Topic index
+func parseSearchId(id string) (bool, int, int) {
+	parts := strings.Split(id, ":")
+	if len(parts) == 2 {
+		if showID, err := strconv.Atoi(parts[0]); err == nil {
+			if topicIdx, err := strconv.Atoi(parts[1]); err == nil {
+				return true, showID, topicIdx
+			}
+		}
+	}
+	return false, 0, 0
 }
