@@ -63,7 +63,9 @@ func main() {
 	log.Printf("Bot running at %s\n", config.Port)
 
 	http.HandleFunc("/event", panicRecover(webHandler))
-	http.ListenAndServe(config.Port, nil)
+	if err := http.ListenAndServe(config.Port, nil); err != nil {
+		log.Fatalf("failed to start server, %v", err)
+	}
 }
 
 func panicRecover(f func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
@@ -119,31 +121,36 @@ func webHandler(w http.ResponseWriter, r *http.Request) {
 		Bot  string `json:"bot"`
 	}
 
+	reportErr := func(err error, w http.ResponseWriter) {
+		w.WriteHeader(http.StatusExpectationFailed)
+		if err != nil {
+			fmt.Fprintf(w, "%v", err)
+		}
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	var rd reqData
 	err := decoder.Decode(&rd)
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusExpectationFailed)
+		reportErr(err, w)
 		return
 	}
 	defer r.Body.Close()
 
 	answer, err := query(strings.ToLower(rd.Text))
 	if err != nil || answer == "" {
-		if err != nil {
-			log.Println(err)
-		}
-		w.WriteHeader(http.StatusExpectationFailed)
+		reportErr(err, w)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(respData{Text: answer, Bot: config.BotName})
+	out, err := json.Marshal(respData{Text: answer, Bot: config.BotName})
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusExpectationFailed)
+		reportErr(err, w)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintf(w, "%s", out)
 }
 
 func query(q string) (string, error) {

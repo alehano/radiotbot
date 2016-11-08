@@ -4,9 +4,9 @@ const (
 	Port                 = ":8080"
 	DefaultSearchResults = 5
 	MaxSearchResults     = 30
-	BotName              = "Поиск бот/search-bot"
+	BotName              = "search-bot"
 	RadioTURL            = "https://radio-t.com"
-	ShowsFilePath        = "./data/shows.gob"
 	RadioTArchiveURL     = RadioTURL + "/archives/"
+	ShowsFilePath        = "./data/shows.gob"
 	FetchWorkers         = 10
 )
