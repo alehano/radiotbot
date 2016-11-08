@@ -10,10 +10,14 @@ import (
 
 func Update(shows *Shows, index bleve.Index) {
 	log.Println("Updating...")
-	newShows := GetShows(shows.Last().ID, func(err error) {
+	newShows := GetShows(518, func(err error) {
 		log.Println(err)
 	})
 
+	//newShows := GetShows(shows.Last().ID, func(err error) {
+	//	log.Println(err)
+	//})
+	//
 	for _, show := range newShows.GetItems() {
 		shows.Add(show)
 		err := AddToIndex(index, show)

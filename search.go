@@ -7,7 +7,6 @@ import (
 )
 
 func NewSearchIndex() (bleve.Index, error) {
-	// TODO: russian search
 	mapping := bleve.NewIndexMapping()
 	return bleve.NewMemOnly(mapping)
 }

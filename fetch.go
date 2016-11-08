@@ -91,6 +91,17 @@ func fetchShow(url string) (Show, error) {
 		return show, err
 	}
 
+	idS := doc.Find("h1.entry-title").Text()
+	idS = strings.TrimPrefix(idS, radioTTitlePrefix)
+	idS = strings.TrimSpace(idS)
+	if id, err := strconv.Atoi(idS); err == nil {
+		show.ID = id
+	} else {
+		return show, errors.New("Bad ID for: " + url)
+	}
+
+	show.URL = url
+
 	allErr := []error{}
 	doc.Find(".entry-content ul li").Each(func(i int, s *goquery.Selection) {
 
@@ -109,15 +120,6 @@ func fetchShow(url string) (Show, error) {
 		})
 		show.TopicsMarkdown = append(show.TopicsMarkdown, topic)
 	})
-
-	idS := doc.Find("h1.entry-title").Text()
-	idS = strings.TrimPrefix(idS, radioTTitlePrefix)
-	idS = strings.TrimSpace(idS)
-	if id, err := strconv.Atoi(idS); err == nil {
-		show.ID = id
-	} else {
-		return show, errors.New("Bad ID for: " + url)
-	}
 
 	if dateS, ok := doc.Find(".meta time").Attr("datetime"); ok {
 		if date, err := time.Parse(time.RFC3339, dateS); err == nil {

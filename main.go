@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/blevesearch/bleve"
@@ -31,6 +32,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Search reindex error:", err)
 	}
+
+	fmt.Println(shows)
 
 	// Update if last show was more than 7 days ago
 	if shows.Last().Date.Add(7 * 24 * time.Hour).Before(time.Now()) {

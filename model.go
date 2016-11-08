@@ -12,6 +12,7 @@ func NewShows() *Shows {
 type Show struct {
 	ID             int
 	Date           time.Time
+	URL            string
 	TopicsMarkdown []string
 	TopicsText     []string
 	ImageURL       string
